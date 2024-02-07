@@ -162,6 +162,12 @@ type FileGroupUpDef struct {
 	After           FileGroupUpAfter `json:"after,omitempty"`
 }
 
+type S3FileGroupUpDef struct {
+	Bucket string `json:"bucket"` // s3://capi-in
+	Src    string `json:"src"`
+	Dst    string `json:"dst"`
+}
+
 type FileGroupDownDef struct {
 	Src string `json:"src"`
 	Dst string `json:"dst"`
@@ -183,6 +189,7 @@ type Project struct {
 	FileGroupsDown     map[string]*FileGroupDownDef `json:"file_groups_down"`
 	Instances          map[string]*InstanceDef      `json:"instances"`
 	DeployProviderName string                       `json:"deploy_provider_name"`
+	S3FileGroupsUp     map[string]*S3FileGroupUpDef `json:"s3_file_groups_up"`
 	CliEnvVars         map[string]string
 }
 

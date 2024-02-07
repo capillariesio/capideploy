@@ -19,6 +19,14 @@ if [ "$DIR_CODE_PARQUET" = "" ]; then
   echo Error, missing DIR_CODE_PARQUET=~/src/capillaries/test/code/parquet
   exit 1
 fi
+if [ "$DIR_SRC_CA" = "" ]; then
+  echo Error, missing DIR_CA=~/src/capillaries/test/ca
+  exit 1
+fi
+if [ "$DIR_BUILD_CA" = "" ]; then
+  echo Error, missing DIR_CA=~/src/capillaries/build/ca
+  exit 1
+fi
 
 cd "$DIR_CAPILLARIES_ROOT"
 echo "Building Capillaries binaries from " \"$(pwd)\"
@@ -26,6 +34,7 @@ echo "$DIR_BUILD_LINUX_AMD64"
 echo "$DIR_BUILD_LINUX_ARM64"
 echo "$DIR_PKG_EXE"
 echo "$DIR_CODE_PARQUET"
+echo "$DIR_SRC_CA" "$DIR_BUILD_CA"
 
 # Assuming HOME is set by ExecLocal
 export PATH=$PATH:/usr/local/go/bin
@@ -39,6 +48,10 @@ fi
 
 if [ ! -d "$DIR_BUILD_LINUX_ARM64" ]; then
   mkdir -p "$DIR_BUILD_LINUX_ARM64"
+fi
+
+if [ ! -d "$DIR_BUILD_CA" ]; then
+  mkdir -p "$DIR_BUILD_CA"
 fi
 
 GOOS=linux GOARCH=amd64 go build -o "$DIR_BUILD_LINUX_AMD64/capidaemon" -ldflags="-s -w" "$DIR_PKG_EXE/daemon/capidaemon.go"
@@ -58,3 +71,7 @@ GOOS=linux GOARCH=arm64 go build -o "$DIR_BUILD_LINUX_ARM64/capitoolbelt" -ldfla
 gzip -f "$DIR_BUILD_LINUX_ARM64/capitoolbelt"
 GOOS=linux GOARCH=arm64 go build -o "$DIR_BUILD_LINUX_ARM64/capiparquet" -ldflags="-s -w" "$DIR_CODE_PARQUET/capiparquet.go"
 gzip -f "$DIR_BUILD_LINUX_ARM64/capiparquet"
+
+pushd "$DIR_SRC_CA"
+tar cvzf "$DIR_BUILD_CA/all.tgz" *
+popd

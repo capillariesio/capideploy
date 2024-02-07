@@ -1,11 +1,13 @@
 {
     "artifacts": {
         "env": {
+            "DIR_BUILD_CA": "/mnt/c/Users/John Doe/src/capillaries/build/ca",
             "DIR_BUILD_LINUX_AMD64": "/mnt/c/Users/John Doe/src/capillaries/build/linux/amd64",
             "DIR_BUILD_LINUX_ARM64": "/mnt/c/Users/John Doe/src/capillaries/build/linux/arm64",
             "DIR_CAPILLARIES_ROOT": "/mnt/c/Users/John Doe/src/capillaries",
             "DIR_CODE_PARQUET": "/mnt/c/Users/John Doe/src/capillaries/test/code/parquet",
-            "DIR_PKG_EXE": "/mnt/c/Users/John Doe/src/capillaries/pkg/exe"
+            "DIR_PKG_EXE": "/mnt/c/Users/John Doe/src/capillaries/pkg/exe",
+            "DIR_SRC_CA": "/mnt/c/Users/John Doe/src/capillaries/test/ca"
         },
         "cmd": [
             "sh/local/build_binaries.sh",
@@ -251,7 +253,7 @@
             "cidr": "10.5.0.0/24",
             "allocation_pool": "start=10.5.0.240,end=10.5.0.254",
             "availability_zone": "us-east-1a",
-            "route_table_to_nat": "rtb-0ec75763bc10716b4"
+            "route_table_to_nat": "rtb-065dbbb65bea6278a"
         },
         "public_subnet": {
             "name": "sampledeployment005_public_subnet",
@@ -277,6 +279,7 @@
             "owner": "{CAPIDEPLOY_SSH_USER}",
             "after": {
                 "env": {
+                    "CAPI_IN_S3_BUCKET_ENDPOINT": "https://capi-in.s3.us-east-1a.amazonaws.com",
                     "LOCAL_CFG_LOCATION": "/mnt/capi_cfg",
                     "MOUNT_POINT_CFG": "/mnt/capi_cfg",
                     "MOUNT_POINT_IN": "/mnt/capi_in",
@@ -284,6 +287,20 @@
                 },
                 "cmd": [
                     "sh/capiscripts/adjust_cfg_in_out.sh"
+                ]
+            }
+        },
+        "up_ca": {
+            "src": "/mnt/c/Users/John Doe/src/capillaries/build/ca/all.tgz",
+            "dst": "/home/{CAPIDEPLOY_SSH_USER}/bin/ca",
+            "dir_permissions": 744,
+            "file_permissions": 644,
+            "after": {
+                "env": {
+                    "CAPI_BINARY_ROOT": "/home/{CAPIDEPLOY_SSH_USER}/bin"
+                },
+                "cmd": [
+                    "sh/capiscripts/unpack_ca.sh"
                 ]
             }
         },
@@ -327,6 +344,14 @@
             "dst": "/home/{CAPIDEPLOY_SSH_USER}/bin",
             "dir_permissions": 744,
             "file_permissions": 744,
+            "after": {}
+        },
+        "up_fannie_mae_bigtest_out": {
+            "src": "/tmp/capi_out/fannie_mae_bigtest/readme.txt",
+            "dst": "/mnt/capi_out/fannie_mae_bigtest",
+            "dir_permissions": 777,
+            "file_permissions": 666,
+            "owner": "{CAPIDEPLOY_SSH_USER}",
             "after": {}
         },
         "up_lookup_bigtest_in": {
@@ -643,11 +668,13 @@
                 "up_portfolio_bigtest_out",
                 "up_portfolio_quicktest_in",
                 "up_portfolio_quicktest_out",
+                "up_fannie_mae_bigtest_out",
                 "up_webapi_binary",
                 "up_webapi_env_config",
                 "up_toolbelt_binary",
                 "up_toolbelt_env_config",
                 "up_capiparquet_binary",
+                "up_ca",
                 "up_ui",
                 "up_diff_scripts",
                 "down_capi_out",
@@ -855,7 +882,8 @@
             },
             "applicable_file_groups": [
                 "up_daemon_binary",
-                "up_daemon_env_config"
+                "up_daemon_env_config",
+                "up_ca"
             ]
         },
         "daemon002": {
@@ -911,7 +939,8 @@
             },
             "applicable_file_groups": [
                 "up_daemon_binary",
-                "up_daemon_env_config"
+                "up_daemon_env_config",
+                "up_ca"
             ]
         },
         "daemon003": {
@@ -967,7 +996,8 @@
             },
             "applicable_file_groups": [
                 "up_daemon_binary",
-                "up_daemon_env_config"
+                "up_daemon_env_config",
+                "up_ca"
             ]
         },
         "daemon004": {
@@ -1023,7 +1053,8 @@
             },
             "applicable_file_groups": [
                 "up_daemon_binary",
-                "up_daemon_env_config"
+                "up_daemon_env_config",
+                "up_ca"
             ]
         },
         "prometheus": {
@@ -1100,5 +1131,12 @@
         }
     },
     "deploy_provider_name": "aws",
+    "s3_file_groups_up": {
+        "up_fannie_mae_bigtest_in": {
+            "bucket": "s3://capi-in",
+            "src": "/tmp/capi_in/fannie_mae_bigtest",
+            "dst": "fannie_mae_bigtest"
+        }
+    },
     "CliEnvVars": null
 }

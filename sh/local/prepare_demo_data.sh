@@ -35,5 +35,8 @@ pushd ./test/code/portfolio/bigtest
 ./1_create_data.sh
 popd
 
+pushd ./test/code/fannie_mae/bigtest
+./1_copy_data.sh
+popd
 
 
