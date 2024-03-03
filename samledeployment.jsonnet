@@ -5,17 +5,18 @@
   local dep_name = 'sampledeployment005',  // Can be any combination of alphanumeric characters. Make it unique.
 
   // x - test bare minimum, 2x - better, 4x - decent test, 16x - that's where it gets interesting
-  local cassandra_node_flavor = 'aws.c6a.32', // last number is the number of core in Cassandra nodes
-  local architecture = 'amd64', // amd64 or arm64 
+  local cassandra_node_flavor = 'aws.c7g.32', // last number is the number of cores in Cassandra nodes
+  local architecture = 'arm64', // amd64 or arm64 
   // Cassandra cluster size - 4,8,16
   local cassandra_total_nodes = 4, 
   // If tasks are CPU-intensive (Python calc), make it equal to cassandra_total_nodes, otherwise cassandra_total_nodes/2
   local daemon_total_instances = cassandra_total_nodes, 
-  local DEFAULT_DAEMON_THREAD_POOL_SIZE = '24', // daemon_cores*1.5
-  local DEFAULT_DAEMON_DB_WRITERS = '16', // Depends on cassandra latency, reasonable values are 5-20
+  local DEFAULT_DAEMON_THREAD_POOL_SIZE = '24', // max daemon_cores*1.5
+  local DEFAULT_DAEMON_DB_WRITERS = '8', // Depends on cassandra latency, reasonable values are 5-20
 
   // Basics
   local default_root_key_name = dep_name + '-root-key',  // This should match the name of the keypair you already created in Openstack/AWS
+  local s3_bucket_in = "capi-in", // Assuming it was created in subnet_availability_zone, and it's public: https://stackoverflow.com/questions/71258372/how-can-i-access-the-s3-bucket-from-internet
 
 // Helper
   local provider_name = getFromMap({
@@ -170,13 +171,13 @@
       '4x': 'c6a.2xlarge',
       '16x': 'c6a.8xlarge',
       'aws.c6a.8': 'c6a.2xlarge',
-      'aws.c6a.32': 'c6a.8xlarge',
+      'aws.c6a.32': 'c5ad.8xlarge', // 'c5ad.16xlarge' 2x1200  'c5ad.8xlarge' 2x600,
       'aws.c6a.64': 'c6a.16xlarge',
       'aws.c7g.16': 'c7g.4xlarge',
-      'aws.c7g.32': 'c7g.8xlarge',
+      'aws.c7g.32': 'c7gd.8xlarge', // 1x900
       'aws.c7gn.32': 'c7gn.8xlarge',
       'aws.c7gn.64': 'c7gn.16xlarge',
-      'aws.c7g.64': 'c7g.metal',
+      'aws.c7g.64': 'c7gd.16xlarge', // 2x1900
       'aws.c7g.64.all.metal': 'c7g.metal',
       'aws.hpc7g.64': 'hpc7g.16xlarge',      
       '18x': 'c5n.9xlarge',
@@ -213,7 +214,7 @@
       'aws.c7g.32': 'c7g.4xlarge',
       'aws.c7gn.32': 'c7gn.4xlarge',
       'aws.c7gn.64': 'c7gn.8xlarge',
-      'aws.c7g.64': 'c7g.8xlarge',
+      'aws.c7g.64': 'c7g.4xlarge',
       'aws.c7g.64.all.metal': 'c7g.metal',
       'aws.hpc7g.64': 'hpc7g.8xlarge',
       '18x': 'c5n.4xlarge',
@@ -222,6 +223,12 @@
       '96x': 'c6a.24xlarge'
     }
   }, dep_name, cassandra_node_flavor),
+
+  local cassandra_nvme_regex = 
+    if instance_flavor_cassandra == "c5ad.8xlarge" then "nvme[0-9]n[0-9] 558.8G"
+    else if instance_flavor_cassandra == "c7gd.8xlarge" then "nvme[0-9]n[0-9] 1.7T"
+    else if instance_flavor_cassandra == "c7gd.16xlarge" then "nvme[0-9]n[0-9] 1.7T"
+    else "no-nvme-mask-specidied",
 
   // Volumes
   local volume_availability_zone = getFromMap({
@@ -249,22 +256,25 @@
     else 'unknown-architecture-unknown-build-dir',
   local pkgExeDir = capillariesRoot + '/pkg/exe',
   local testCodeParquetDir = capillariesRoot + '/test/code/parquet',
+  // If stock CA store (say, Ubuntu's /usr/local/share/ca-certificates) does not have what we need, use whatever we have in test/ca
+  local srcCa = capillariesRoot + '/test/ca', 
+  local buildCa = capillariesRoot + '/build/ca',
   
   // Keys
   local sftp_config_public_key_path = '~/.ssh/' + dep_name + '_sftp.pub',
   local sftp_config_private_key_path = '~/.ssh/' + dep_name + '_sftp',
   local ssh_config_private_key_path = '~/.ssh/' + dep_name + '_rsa',
   
-  // Prometheus versions
+  // Prometheus and exporters versions
   local prometheus_node_exporter_version = '1.6.0',
   local prometheus_server_version = '2.45.0',
-  local prometheus_cassandra_exporter_version = '0.9.12',
+  local jmx_exporter_version = '0.20.0',
 
   // Used by Prometheus "\\'localhost:9100\\',\\'10.5.0.10:9100\\',\\'10.5.0.5:9100\\',\\'10.5.0.11:9100\\'...",
-  local prometheus_targets = std.format("\\'localhost:9100\\',\\'%s:9100\\',\\'%s:9100\\',", [internal_bastion_ip, rabbitmq_ip]) +
-                             "\\'" + std.join(":9100\\',\\'", cassandra_ips) + ":9100\\'," +
-                             "\\'" + std.join(":9500\\',\\'", cassandra_ips) + ":9500\\'," + // Cassandra exporter
-                             "\\'" + std.join(":9100\\',\\'", daemon_ips) + ":9100\\'",
+  local prometheus_targets = std.format("\\'localhost:9100\\',\\'%s:9100\\',\\'%s:9100\\',", [internal_bastion_ip, rabbitmq_ip]) + // Prometheus node exporter
+                             "\\'" + std.join(":9100\\',\\'", cassandra_ips) + ":9100\\'," + // Prometheus node exporter
+                             "\\'" + std.join(":7070\\',\\'", cassandra_ips) + ":7070\\'," + // JMX exporter
+                             "\\'" + std.join(":9100\\',\\'", daemon_ips) + ":9100\\'",      // Prometheus node exporter
 
   deploy_provider_name: provider_name,
 
@@ -314,6 +324,8 @@
       DIR_CAPILLARIES_ROOT: capillariesRoot,
       DIR_BUILD_LINUX_AMD64: buildLinuxAmd64Dir,
       DIR_BUILD_LINUX_ARM64: buildLinuxArm64Dir,
+      DIR_SRC_CA: srcCa,
+      DIR_BUILD_CA: buildCa,
       DIR_PKG_EXE: pkgExeDir,
       DIR_CODE_PARQUET: testCodeParquetDir,
     },
@@ -466,11 +478,11 @@
           direction: 'ingress',
         },
         {
-          desc: 'Cassandra Prometheus node exporter',
+          desc: 'JMX exporter',
           protocol: 'tcp',
           ethertype: 'IPv4',
           remote_ip: $.network.cidr,
-          port: 9500,
+          port: 7070,
           direction: 'ingress',
         },
         {
@@ -529,9 +541,25 @@
           MOUNT_POINT_CFG: '/mnt/capi_cfg', // If SFTP used: 'sftp://{CAPIDEPLOY_SFTP_USER}@' + internal_bastion_ip + '/mnt/capi_cfg',
           MOUNT_POINT_IN: '/mnt/capi_in',
           MOUNT_POINT_OUT: '/mnt/capi_out',
+          CAPI_IN_S3_BUCKET_ENDPOINT: "https://"+s3_bucket_in+".s3."+subnet_availability_zone+".amazonaws.com",
         },
         cmd: [
           'sh/capiscripts/adjust_cfg_in_out.sh',
+        ],
+      },
+    },
+    // daemon/webapi/toolbelt will use it to access https files
+    up_ca: {
+      src: buildCa + '/all.tgz',
+      dst: '/home/' + $.ssh_config.user + '/bin/ca', // $ENV_CONFIG_FILE ca_path settings points here
+      dir_permissions: 744,
+      file_permissions: 644,
+      after: {
+        env: {
+          CAPI_BINARY_ROOT: '/home/' + $.ssh_config.user + '/bin'
+        },
+        cmd: [
+          'sh/capiscripts/unpack_ca.sh',
         ],
       },
     },
@@ -652,6 +680,14 @@
           'sh/capiscripts/unpack_portfolio_big_out.sh',
         ],
       },
+    },
+    up_fannie_mae_bigtest_out: {
+      src: '/tmp/capi_out/fannie_mae_bigtest/readme.txt',
+      dst: '/mnt/capi_out/fannie_mae_bigtest',
+      dir_permissions: 777,
+      file_permissions: 666,
+      owner: $.ssh_config.user,
+      after: {},
     },
     up_portfolio_quicktest_in: {
       src: '/tmp/capi_in/portfolio_quicktest',
@@ -882,11 +918,13 @@
         'up_portfolio_bigtest_out',
         'up_portfolio_quicktest_in',
         'up_portfolio_quicktest_out',
+        'up_fannie_mae_bigtest_out',
         'up_webapi_binary',
         'up_webapi_env_config',
         'up_toolbelt_binary',
         'up_toolbelt_env_config',
         'up_capiparquet_binary',
+        'up_ca',
         'up_ui',
         'up_diff_scripts',
         'down_capi_out',
@@ -987,13 +1025,15 @@
           CASSANDRA_SEEDS: cassandra_seeds,
           INITIAL_TOKEN: e.token,
           PROMETHEUS_NODE_EXPORTER_VERSION: prometheus_node_exporter_version,
-          PROMETHEUS_CASSANDRA_EXPORTER_VERSION: prometheus_cassandra_exporter_version,
+          JMX_EXPORTER_VERSION: jmx_exporter_version,
+          NVME_REGEX: cassandra_nvme_regex,
         },
         cmd: {
           install: [
             'sh/common/replace_nameserver.sh',
             'sh/prometheus/install_node_exporter.sh',
             'sh/cassandra/install.sh',
+            'sh/common/attach_nvme.sh', // must run after Cassandra install
           ],
           config: [
             'sh/prometheus/config_node_exporter.sh',
@@ -1054,9 +1094,9 @@
           config: [
             'sh/nfs/config_client.sh',
             'sh/logrotate/config_capidaemon_logrotate.sh',
-            'sh/rsyslog/config_capidaemon_log_sender.sh',
             'sh/prometheus/config_node_exporter.sh',
             'sh/daemon/config.sh',
+            'sh/rsyslog/config_capidaemon_log_sender.sh', // This should go after daemon/config.sh, otherwise rsyslog sender does not pick up /var/log/capidaemon/capidaemon.log
           ],
           start: [
             'sh/daemon/start.sh',
@@ -1070,6 +1110,7 @@
       applicable_file_groups: [
         'up_daemon_binary',
         'up_daemon_env_config',
+        'up_ca',
       ],
     }
     for e in std.mapWithIndex(function(i, v) {
@@ -1080,6 +1121,14 @@
   },
 
   instances: bastion_instance + rabbitmq_instance + prometheus_instance + cass_instances + daemon_instances,
+
+  s3_file_groups_up: {
+    up_fannie_mae_bigtest_in: {
+            "bucket": "s3://" + s3_bucket_in,
+            "src": "/tmp/capi_in/fannie_mae_bigtest",
+            "dst": "fannie_mae_bigtest"
+    }
+  },
 
   local getFromMap = function(m, k)
     if std.length(m[k]) > 0 then m[k] else "no-key-" + k,

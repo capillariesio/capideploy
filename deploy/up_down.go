@@ -298,3 +298,55 @@ func DownloadFileSftp(prj *Project, ipAddress string, srcPath string, dstPath st
 
 	return lb.Complete(nil)
 }
+
+type S3FileUploadSpec struct {
+	Src string
+	Dst string
+}
+
+func S3FileGroupUpDefsToSpecs(prj *Project, s3FileGroupsToUpload map[string]*S3FileGroupUpDef) ([]*S3FileUploadSpec, error) {
+	s3FileUploadSpecs := make([]*S3FileUploadSpec, 0)
+	for fgName, fgDef := range s3FileGroupsToUpload {
+		srcAbsPath, err := filepath.Abs(fgDef.Src)
+		if err != nil {
+			return nil, fmt.Errorf("cannot resolve absolute src path from %s: %s", fgDef.Src, err.Error())
+		}
+		fi, err := os.Stat(srcAbsPath)
+		if err != nil {
+			return nil, fmt.Errorf("cannot analyze path %s in %s: %s", srcAbsPath, fgName, err.Error())
+		}
+		if fi.IsDir() {
+			if err := filepath.WalkDir(srcAbsPath, func(path string, d fs.DirEntry, err error) error {
+				if !d.IsDir() {
+					fileSubpath := strings.ReplaceAll(path, srcAbsPath, "")
+					s3FileUploadSpecs = append(s3FileUploadSpecs, &S3FileUploadSpec{
+						Src: path,
+						Dst: fgDef.Bucket + "/" + filepath.Join(fgDef.Dst, fileSubpath),
+					})
+				}
+				return nil
+			}); err != nil {
+				return nil, fmt.Errorf("bad file group up %s", fgName)
+			}
+		} else {
+			s3FileUploadSpecs = append(s3FileUploadSpecs, &S3FileUploadSpec{
+				Src: srcAbsPath,
+				Dst: fgDef.Bucket + "/" + filepath.Join(fgDef.Dst, filepath.Base(srcAbsPath)),
+			})
+		}
+	}
+
+	return s3FileUploadSpecs, nil
+}
+
+func UploadFileS3(prj *Project, srcPath string, dstPath string, isVerbose bool) (LogMsg, error) {
+	lb := NewLogBuilder(fmt.Sprintf("Uploading %s to %s", srcPath, dstPath), isVerbose)
+
+	er := ExecLocal(prj, "aws", []string{"s3", "cp", srcPath, dstPath}, prj.CliEnvVars, "")
+	lb.Add(er.ToString())
+	if er.Error != nil {
+		return lb.Complete(er.Error)
+	}
+
+	return lb.Complete(nil)
+}

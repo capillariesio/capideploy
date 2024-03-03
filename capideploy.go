@@ -26,6 +26,7 @@ const (
 	CmdDeleteInstances      string = "delete_instances"
 	CmdAttachVolumes        string = "attach_volumes"
 	CmdUploadFiles          string = "upload_files"
+	CmdUploadS3             string = "upload_s3"
 	CmdDownloadFiles        string = "download_files"
 	CmdInstallServices      string = "install_services"
 	CmdConfigServices       string = "config_services"
@@ -56,7 +57,7 @@ func getNicknamesArg(entityName string) (string, error) {
 	return os.Args[2], nil
 }
 
-func filterByNickname[GenericDef deploy.FileGroupUpDef | deploy.FileGroupDownDef | deploy.InstanceDef](nicknames string, sourceMap map[string]*GenericDef, entityName string) (map[string]*GenericDef, error) {
+func filterByNickname[GenericDef deploy.FileGroupUpDef | deploy.FileGroupDownDef | deploy.InstanceDef | deploy.S3FileGroupUpDef](nicknames string, sourceMap map[string]*GenericDef, entityName string) (map[string]*GenericDef, error) {
 	var defMap map[string]*GenericDef
 	rawNicknames := strings.Split(nicknames, ",")
 	defMap = map[string]*GenericDef{}
@@ -126,6 +127,7 @@ Commands:
   %s <comma-separated list of instances to copy private keys to, or 'all'>
   %s <comma-separated list of upload file groups, or 'all'>
   %s <comma-separated list of download file groups, or 'all'>  
+  %s <comma-separated list of upload S3 file groups, or 'all'>
   %s <comma-separated list of instances to install services on, or 'all'>
   %s <comma-separated list of instances to config services on, or 'all'>
   %s <comma-separated list of instances to start services on, or 'all'>
@@ -151,6 +153,8 @@ Commands:
 
 		CmdUploadFiles,
 		CmdDownloadFiles,
+
+		CmdUploadS3,
 
 		CmdInstallServices,
 		CmdConfigServices,
@@ -497,6 +501,35 @@ func main() {
 					logChan <- logMsg
 					errChan <- err
 				}(&prjPair.Live, logChan, errChan, fdSpec)
+			}
+
+		case CmdUploadS3:
+			nicknames, err := getNicknamesArg("S3 file groups to upload")
+			if err != nil {
+				log.Fatalf(err.Error())
+			}
+
+			s3FileGroups, err := filterByNickname(nicknames, prjPair.Live.S3FileGroupsUp, "S3 file group to upload")
+			if err != nil {
+				log.Fatalf(err.Error())
+			}
+
+			// Walk through src locally and create file upload specs and after-file specs
+			fileSpecs, err := deploy.S3FileGroupUpDefsToSpecs(&prjPair.Live, s3FileGroups)
+			if err != nil {
+				log.Fatalf(err.Error())
+			}
+
+			errorsExpected = len(fileSpecs)
+			errChan = make(chan error, len(fileSpecs))
+			for _, fuSpec := range fileSpecs {
+				sem <- 1
+				go func(prj *deploy.Project, logChan chan deploy.LogMsg, errChan chan error, fuSpec *deploy.S3FileUploadSpec) {
+					logMsg, err := deploy.UploadFileS3(prj, fuSpec.Src, fuSpec.Dst, *argVerbosity)
+					logChan <- logMsg
+					errChan <- err
+					<-sem
+				}(&prjPair.Live, logChan, errChan, fuSpec)
 			}
 
 		default:

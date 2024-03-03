@@ -240,7 +240,11 @@ func ExecScriptsOnInstance(sshConfig *SshConfigDef, ipAddress string, env map[st
 	for _, shellScriptFile := range shellScriptFiles {
 		cmdBuilder := strings.Builder{}
 		for k, v := range env {
-			cmdBuilder.WriteString(fmt.Sprintf("%s=%s\n", k, v))
+			if strings.Contains(v, " ") {
+				cmdBuilder.WriteString(fmt.Sprintf("%s='%s'\n", k, v)) // Use quotes, there may be spaces in values
+			} else {
+				cmdBuilder.WriteString(fmt.Sprintf("%s=%s\n", k, v))
+			}
 		}
 
 		shellScriptString, err := readScriptFile(filepath.Join(prjFileDirPath, shellScriptFile))

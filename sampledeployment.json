@@ -1,11 +1,13 @@
 {
     "artifacts": {
         "env": {
+            "DIR_BUILD_CA": "/mnt/c/Users/John Doe/src/capillaries/build/ca",
             "DIR_BUILD_LINUX_AMD64": "/mnt/c/Users/John Doe/src/capillaries/build/linux/amd64",
             "DIR_BUILD_LINUX_ARM64": "/mnt/c/Users/John Doe/src/capillaries/build/linux/arm64",
             "DIR_CAPILLARIES_ROOT": "/mnt/c/Users/John Doe/src/capillaries",
             "DIR_CODE_PARQUET": "/mnt/c/Users/John Doe/src/capillaries/test/code/parquet",
-            "DIR_PKG_EXE": "/mnt/c/Users/John Doe/src/capillaries/pkg/exe"
+            "DIR_PKG_EXE": "/mnt/c/Users/John Doe/src/capillaries/pkg/exe",
+            "DIR_SRC_CA": "/mnt/c/Users/John Doe/src/capillaries/test/ca"
         },
         "cmd": [
             "sh/local/build_binaries.sh",
@@ -185,12 +187,12 @@
                     "direction": "ingress"
                 },
                 {
-                    "desc": "Cassandra Prometheus node exporter",
+                    "desc": "JMX exporter",
                     "id": "",
                     "protocol": "tcp",
                     "ethertype": "IPv4",
                     "remote_ip": "10.5.0.0/16",
-                    "port": 9500,
+                    "port": 7070,
                     "direction": "ingress"
                 },
                 {
@@ -251,7 +253,7 @@
             "cidr": "10.5.0.0/24",
             "allocation_pool": "start=10.5.0.240,end=10.5.0.254",
             "availability_zone": "us-east-1a",
-            "route_table_to_nat": "rtb-0ec75763bc10716b4"
+            "route_table_to_nat": "rtb-07207076e2c245309"
         },
         "public_subnet": {
             "name": "sampledeployment005_public_subnet",
@@ -277,6 +279,7 @@
             "owner": "{CAPIDEPLOY_SSH_USER}",
             "after": {
                 "env": {
+                    "CAPI_IN_S3_BUCKET_ENDPOINT": "https://capi-in.s3.us-east-1a.amazonaws.com",
                     "LOCAL_CFG_LOCATION": "/mnt/capi_cfg",
                     "MOUNT_POINT_CFG": "/mnt/capi_cfg",
                     "MOUNT_POINT_IN": "/mnt/capi_in",
@@ -287,8 +290,22 @@
                 ]
             }
         },
+        "up_ca": {
+            "src": "/mnt/c/Users/John Doe/src/capillaries/build/ca/all.tgz",
+            "dst": "/home/{CAPIDEPLOY_SSH_USER}/bin/ca",
+            "dir_permissions": 744,
+            "file_permissions": 644,
+            "after": {
+                "env": {
+                    "CAPI_BINARY_ROOT": "/home/{CAPIDEPLOY_SSH_USER}/bin"
+                },
+                "cmd": [
+                    "sh/capiscripts/unpack_ca.sh"
+                ]
+            }
+        },
         "up_capiparquet_binary": {
-            "src": "/mnt/c/Users/John Doe/src/capillaries/build/linux/amd64/capiparquet.gz",
+            "src": "/mnt/c/Users/John Doe/src/capillaries/build/linux/arm64/capiparquet.gz",
             "dst": "/home/{CAPIDEPLOY_SSH_USER}/bin",
             "dir_permissions": 744,
             "file_permissions": 644,
@@ -302,7 +319,7 @@
             }
         },
         "up_daemon_binary": {
-            "src": "/mnt/c/Users/John Doe/src/capillaries/build/linux/amd64/capidaemon.gz",
+            "src": "/mnt/c/Users/John Doe/src/capillaries/build/linux/arm64/capidaemon.gz",
             "dst": "/home/{CAPIDEPLOY_SSH_USER}/bin",
             "dir_permissions": 744,
             "file_permissions": 644,
@@ -327,6 +344,14 @@
             "dst": "/home/{CAPIDEPLOY_SSH_USER}/bin",
             "dir_permissions": 744,
             "file_permissions": 744,
+            "after": {}
+        },
+        "up_fannie_mae_bigtest_out": {
+            "src": "/tmp/capi_out/fannie_mae_bigtest/readme.txt",
+            "dst": "/mnt/capi_out/fannie_mae_bigtest",
+            "dir_permissions": 777,
+            "file_permissions": 666,
+            "owner": "{CAPIDEPLOY_SSH_USER}",
             "after": {}
         },
         "up_lookup_bigtest_in": {
@@ -454,7 +479,7 @@
             "after": {}
         },
         "up_toolbelt_binary": {
-            "src": "/mnt/c/Users/John Doe/src/capillaries/build/linux/amd64/capitoolbelt.gz",
+            "src": "/mnt/c/Users/John Doe/src/capillaries/build/linux/arm64/capitoolbelt.gz",
             "dst": "/home/{CAPIDEPLOY_SSH_USER}/bin",
             "dir_permissions": 744,
             "file_permissions": 644,
@@ -489,7 +514,7 @@
             }
         },
         "up_webapi_binary": {
-            "src": "/mnt/c/Users/John Doe/src/capillaries/build/linux/amd64/capiwebapi.gz",
+            "src": "/mnt/c/Users/John Doe/src/capillaries/build/linux/arm64/capiwebapi.gz",
             "dst": "/home/{CAPIDEPLOY_SSH_USER}/bin",
             "dir_permissions": 744,
             "file_permissions": 644,
@@ -527,8 +552,8 @@
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.1.10",
             "uses_ssh_config_external_ip_address": true,
-            "flavor": "c6a.large",
-            "image": "ami-0d8583a0d8d6dd14f",
+            "flavor": "c7g.large",
+            "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "public",
             "volumes": {
@@ -643,11 +668,13 @@
                 "up_portfolio_bigtest_out",
                 "up_portfolio_quicktest_in",
                 "up_portfolio_quicktest_out",
+                "up_fannie_mae_bigtest_out",
                 "up_webapi_binary",
                 "up_webapi_env_config",
                 "up_toolbelt_binary",
                 "up_toolbelt_env_config",
                 "up_capiparquet_binary",
+                "up_ca",
                 "up_ui",
                 "up_diff_scripts",
                 "down_capi_out",
@@ -659,8 +686,8 @@
             "security_group": "internal",
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.0.11",
-            "flavor": "c6a.8xlarge",
-            "image": "ami-0d8583a0d8d6dd14f",
+            "flavor": "c7gd.8xlarge",
+            "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "private",
             "id": "",
@@ -669,14 +696,16 @@
                     "CASSANDRA_IP": "10.5.0.11",
                     "CASSANDRA_SEEDS": "10.5.0.11,10.5.0.12,10.5.0.13,10.5.0.14",
                     "INITIAL_TOKEN": "-9223372036854775808",
-                    "PROMETHEUS_CASSANDRA_EXPORTER_VERSION": "0.9.12",
+                    "JMX_EXPORTER_VERSION": "0.20.0",
+                    "NVME_REGEX": "nvme[0-9]n[0-9] 1.7T",
                     "PROMETHEUS_NODE_EXPORTER_VERSION": "1.6.0"
                 },
                 "cmd": {
                     "install": [
                         "sh/common/replace_nameserver.sh",
                         "sh/prometheus/install_node_exporter.sh",
-                        "sh/cassandra/install.sh"
+                        "sh/cassandra/install.sh",
+                        "sh/common/attach_nvme.sh"
                     ],
                     "config": [
                         "sh/prometheus/config_node_exporter.sh",
@@ -696,8 +725,8 @@
             "security_group": "internal",
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.0.12",
-            "flavor": "c6a.8xlarge",
-            "image": "ami-0d8583a0d8d6dd14f",
+            "flavor": "c7gd.8xlarge",
+            "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "private",
             "id": "",
@@ -706,14 +735,16 @@
                     "CASSANDRA_IP": "10.5.0.12",
                     "CASSANDRA_SEEDS": "10.5.0.11,10.5.0.12,10.5.0.13,10.5.0.14",
                     "INITIAL_TOKEN": "-4611686018427387904",
-                    "PROMETHEUS_CASSANDRA_EXPORTER_VERSION": "0.9.12",
+                    "JMX_EXPORTER_VERSION": "0.20.0",
+                    "NVME_REGEX": "nvme[0-9]n[0-9] 1.7T",
                     "PROMETHEUS_NODE_EXPORTER_VERSION": "1.6.0"
                 },
                 "cmd": {
                     "install": [
                         "sh/common/replace_nameserver.sh",
                         "sh/prometheus/install_node_exporter.sh",
-                        "sh/cassandra/install.sh"
+                        "sh/cassandra/install.sh",
+                        "sh/common/attach_nvme.sh"
                     ],
                     "config": [
                         "sh/prometheus/config_node_exporter.sh",
@@ -733,8 +764,8 @@
             "security_group": "internal",
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.0.13",
-            "flavor": "c6a.8xlarge",
-            "image": "ami-0d8583a0d8d6dd14f",
+            "flavor": "c7gd.8xlarge",
+            "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "private",
             "id": "",
@@ -743,14 +774,16 @@
                     "CASSANDRA_IP": "10.5.0.13",
                     "CASSANDRA_SEEDS": "10.5.0.11,10.5.0.12,10.5.0.13,10.5.0.14",
                     "INITIAL_TOKEN": "0",
-                    "PROMETHEUS_CASSANDRA_EXPORTER_VERSION": "0.9.12",
+                    "JMX_EXPORTER_VERSION": "0.20.0",
+                    "NVME_REGEX": "nvme[0-9]n[0-9] 1.7T",
                     "PROMETHEUS_NODE_EXPORTER_VERSION": "1.6.0"
                 },
                 "cmd": {
                     "install": [
                         "sh/common/replace_nameserver.sh",
                         "sh/prometheus/install_node_exporter.sh",
-                        "sh/cassandra/install.sh"
+                        "sh/cassandra/install.sh",
+                        "sh/common/attach_nvme.sh"
                     ],
                     "config": [
                         "sh/prometheus/config_node_exporter.sh",
@@ -770,8 +803,8 @@
             "security_group": "internal",
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.0.14",
-            "flavor": "c6a.8xlarge",
-            "image": "ami-0d8583a0d8d6dd14f",
+            "flavor": "c7gd.8xlarge",
+            "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "private",
             "id": "",
@@ -780,14 +813,16 @@
                     "CASSANDRA_IP": "10.5.0.14",
                     "CASSANDRA_SEEDS": "10.5.0.11,10.5.0.12,10.5.0.13,10.5.0.14",
                     "INITIAL_TOKEN": "4611686018427387904",
-                    "PROMETHEUS_CASSANDRA_EXPORTER_VERSION": "0.9.12",
+                    "JMX_EXPORTER_VERSION": "0.20.0",
+                    "NVME_REGEX": "nvme[0-9]n[0-9] 1.7T",
                     "PROMETHEUS_NODE_EXPORTER_VERSION": "1.6.0"
                 },
                 "cmd": {
                     "install": [
                         "sh/common/replace_nameserver.sh",
                         "sh/prometheus/install_node_exporter.sh",
-                        "sh/cassandra/install.sh"
+                        "sh/cassandra/install.sh",
+                        "sh/common/attach_nvme.sh"
                     ],
                     "config": [
                         "sh/prometheus/config_node_exporter.sh",
@@ -807,8 +842,8 @@
             "security_group": "internal",
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.0.101",
-            "flavor": "c6a.4xlarge",
-            "image": "ami-0d8583a0d8d6dd14f",
+            "flavor": "c7g.4xlarge",
+            "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "private",
             "id": "",
@@ -822,8 +857,8 @@
                 "env": {
                     "AMQP_URL": "amqp://{CAPIDEPLOY_RABBITMQ_USER_NAME}:{CAPIDEPLOY_RABBITMQ_USER_PASS}@10.5.0.5/",
                     "CASSANDRA_HOSTS": "'[\"10.5.0.11\",\"10.5.0.12\",\"10.5.0.13\",\"10.5.0.14\"]'",
-                    "DAEMON_DB_WRITERS": "16",
-                    "DAEMON_THREAD_POOL_SIZE": "24",
+                    "DAEMON_DB_WRITERS": "4",
+                    "DAEMON_THREAD_POOL_SIZE": "16",
                     "INTERNAL_BASTION_IP": "10.5.1.10",
                     "NFS_DIRS": "/mnt/capi_cfg,/mnt/capi_in,/mnt/capi_out",
                     "PROMETHEUS_NODE_EXPORTER_VERSION": "1.6.0",
@@ -855,7 +890,8 @@
             },
             "applicable_file_groups": [
                 "up_daemon_binary",
-                "up_daemon_env_config"
+                "up_daemon_env_config",
+                "up_ca"
             ]
         },
         "daemon002": {
@@ -863,8 +899,8 @@
             "security_group": "internal",
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.0.102",
-            "flavor": "c6a.4xlarge",
-            "image": "ami-0d8583a0d8d6dd14f",
+            "flavor": "c7g.4xlarge",
+            "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "private",
             "id": "",
@@ -878,8 +914,8 @@
                 "env": {
                     "AMQP_URL": "amqp://{CAPIDEPLOY_RABBITMQ_USER_NAME}:{CAPIDEPLOY_RABBITMQ_USER_PASS}@10.5.0.5/",
                     "CASSANDRA_HOSTS": "'[\"10.5.0.11\",\"10.5.0.12\",\"10.5.0.13\",\"10.5.0.14\"]'",
-                    "DAEMON_DB_WRITERS": "16",
-                    "DAEMON_THREAD_POOL_SIZE": "24",
+                    "DAEMON_DB_WRITERS": "4",
+                    "DAEMON_THREAD_POOL_SIZE": "16",
                     "INTERNAL_BASTION_IP": "10.5.1.10",
                     "NFS_DIRS": "/mnt/capi_cfg,/mnt/capi_in,/mnt/capi_out",
                     "PROMETHEUS_NODE_EXPORTER_VERSION": "1.6.0",
@@ -911,7 +947,8 @@
             },
             "applicable_file_groups": [
                 "up_daemon_binary",
-                "up_daemon_env_config"
+                "up_daemon_env_config",
+                "up_ca"
             ]
         },
         "daemon003": {
@@ -919,8 +956,8 @@
             "security_group": "internal",
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.0.103",
-            "flavor": "c6a.4xlarge",
-            "image": "ami-0d8583a0d8d6dd14f",
+            "flavor": "c7g.4xlarge",
+            "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "private",
             "id": "",
@@ -934,8 +971,8 @@
                 "env": {
                     "AMQP_URL": "amqp://{CAPIDEPLOY_RABBITMQ_USER_NAME}:{CAPIDEPLOY_RABBITMQ_USER_PASS}@10.5.0.5/",
                     "CASSANDRA_HOSTS": "'[\"10.5.0.11\",\"10.5.0.12\",\"10.5.0.13\",\"10.5.0.14\"]'",
-                    "DAEMON_DB_WRITERS": "16",
-                    "DAEMON_THREAD_POOL_SIZE": "24",
+                    "DAEMON_DB_WRITERS": "4",
+                    "DAEMON_THREAD_POOL_SIZE": "16",
                     "INTERNAL_BASTION_IP": "10.5.1.10",
                     "NFS_DIRS": "/mnt/capi_cfg,/mnt/capi_in,/mnt/capi_out",
                     "PROMETHEUS_NODE_EXPORTER_VERSION": "1.6.0",
@@ -967,7 +1004,8 @@
             },
             "applicable_file_groups": [
                 "up_daemon_binary",
-                "up_daemon_env_config"
+                "up_daemon_env_config",
+                "up_ca"
             ]
         },
         "daemon004": {
@@ -975,8 +1013,8 @@
             "security_group": "internal",
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.0.104",
-            "flavor": "c6a.4xlarge",
-            "image": "ami-0d8583a0d8d6dd14f",
+            "flavor": "c7g.4xlarge",
+            "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "private",
             "id": "",
@@ -990,8 +1028,8 @@
                 "env": {
                     "AMQP_URL": "amqp://{CAPIDEPLOY_RABBITMQ_USER_NAME}:{CAPIDEPLOY_RABBITMQ_USER_PASS}@10.5.0.5/",
                     "CASSANDRA_HOSTS": "'[\"10.5.0.11\",\"10.5.0.12\",\"10.5.0.13\",\"10.5.0.14\"]'",
-                    "DAEMON_DB_WRITERS": "16",
-                    "DAEMON_THREAD_POOL_SIZE": "24",
+                    "DAEMON_DB_WRITERS": "4",
+                    "DAEMON_THREAD_POOL_SIZE": "16",
                     "INTERNAL_BASTION_IP": "10.5.1.10",
                     "NFS_DIRS": "/mnt/capi_cfg,/mnt/capi_in,/mnt/capi_out",
                     "PROMETHEUS_NODE_EXPORTER_VERSION": "1.6.0",
@@ -1023,7 +1061,8 @@
             },
             "applicable_file_groups": [
                 "up_daemon_binary",
-                "up_daemon_env_config"
+                "up_daemon_env_config",
+                "up_ca"
             ]
         },
         "prometheus": {
@@ -1031,15 +1070,15 @@
             "security_group": "internal",
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.0.4",
-            "flavor": "t2.micro",
-            "image": "ami-0d8583a0d8d6dd14f",
+            "flavor": "c7g.medium",
+            "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "private",
             "id": "",
             "service": {
                 "env": {
                     "PROMETHEUS_NODE_EXPORTER_VERSION": "1.6.0",
-                    "PROMETHEUS_TARGETS": "\\'localhost:9100\\',\\'10.5.1.10:9100\\',\\'10.5.0.5:9100\\',\\'10.5.0.11:9100\\',\\'10.5.0.12:9100\\',\\'10.5.0.13:9100\\',\\'10.5.0.14:9100\\',\\'10.5.0.11:9500\\',\\'10.5.0.12:9500\\',\\'10.5.0.13:9500\\',\\'10.5.0.14:9500\\',\\'10.5.0.101:9100\\',\\'10.5.0.102:9100\\',\\'10.5.0.103:9100\\',\\'10.5.0.104:9100\\'",
+                    "PROMETHEUS_TARGETS": "\\'localhost:9100\\',\\'10.5.1.10:9100\\',\\'10.5.0.5:9100\\',\\'10.5.0.11:9100\\',\\'10.5.0.12:9100\\',\\'10.5.0.13:9100\\',\\'10.5.0.14:9100\\',\\'10.5.0.11:7070\\',\\'10.5.0.12:7070\\',\\'10.5.0.13:7070\\',\\'10.5.0.14:7070\\',\\'10.5.0.101:9100\\',\\'10.5.0.102:9100\\',\\'10.5.0.103:9100\\',\\'10.5.0.104:9100\\'",
                     "PROMETHEUS_VERSION": "2.45.0"
                 },
                 "cmd": {
@@ -1066,8 +1105,8 @@
             "security_group": "internal",
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.0.5",
-            "flavor": "t2.micro",
-            "image": "ami-0d8583a0d8d6dd14f",
+            "flavor": "c7g.medium",
+            "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "private",
             "id": "",
@@ -1100,5 +1139,12 @@
         }
     },
     "deploy_provider_name": "aws",
+    "s3_file_groups_up": {
+        "up_fannie_mae_bigtest_in": {
+            "bucket": "s3://capi-in",
+            "src": "/tmp/capi_in/fannie_mae_bigtest",
+            "dst": "fannie_mae_bigtest"
+        }
+    },
     "CliEnvVars": null
 }

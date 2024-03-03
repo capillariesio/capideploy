@@ -116,11 +116,17 @@ From now on, this doc assumes `$capideploy` is present and functional.
 $capideploy build_artifacts -prj=sampledeployment.json
 ```
 
-7. Keep in mind that running deploy tool with `-verbose` parameter can be useful for troubleshooting.
+7. Create s3 buckets for files if needed.
+
+8. Keep in mind that running deploy tool with `-verbose` parameter can be useful for troubleshooting.
 
 ## Deploy
 
-```
+``````
+# Upload s3 files:
+
+$capideploy upload_s3 up_fannie_mae_bigtest_in -prj=sampledeployment.json;
+
 # Reserve a floating IP address, it will be assigned to the bastion instance
 # and will be your gateway to all of your instances:
 
@@ -168,14 +174,16 @@ $capideploy attach_volumes '*' -prj=sampledeployment.json
 
 $capideploy upload_files up_daemon_binary,up_daemon_env_config -prj=sampledeployment.json;
 $capideploy upload_files up_webapi_binary,up_webapi_env_config -prj=sampledeployment.json;
-$capideploy upload_files up_ui -prj=sampledeployment.json;
 $capideploy upload_files up_toolbelt_binary,up_toolbelt_env_config -prj=sampledeployment.json;
+$capideploy upload_files up_ca -prj=sampledeployment.json;
+$capideploy upload_files up_ui -prj=sampledeployment.json;
 $capideploy upload_files up_capiparquet_binary -prj=sampledeployment.json;
 $capideploy upload_files up_diff_scripts -prj=sampledeployment.json;
 
 # Upload test files (pick those that you need)
 
 $capideploy upload_files up_all_cfg -prj=sampledeployment.json;
+$capideploy upload_files up_fannie_mae_bigtest_out -prj=sampledeployment.json;
 $capideploy upload_files up_portfolio_bigtest_in,up_portfolio_bigtest_out -prj=sampledeployment.json;
 $capideploy upload_files up_lookup_bigtest_in,up_lookup_bigtest_out -prj=sampledeployment.json;
 $capideploy upload_files up_lookup_quicktest_in,up_lookup_quicktest_out -prj=sampledeployment.json;
@@ -312,6 +320,11 @@ Download all results from capi_out (may take a while):
 
 ```
 $capideploy download_files down_capi_out -prj=sampledeployment.json
+```
+
+or use scp command:
+```
+scp -i ~/.ssh/sampledeployment005_rsa ubuntu@$BASTION_IP:/mnt/capi_out/fannie_mae_bigtest/loan_summaries_calculated.parquet loan_summaries_calculated.parquet
 ```
 
 Alternatively, verify results against the baseline remotely:

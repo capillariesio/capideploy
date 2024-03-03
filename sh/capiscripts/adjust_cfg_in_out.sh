@@ -29,9 +29,18 @@ if [ "$MOUNT_POINT_OUT" = "" ]; then
   exit 1
 fi
 
+if [ "$CAPI_IN_S3_BUCKET_ENDPOINT" = "" ]; then
+  echo Error, missing:
+  echo "CAPI_IN_S3_BUCKET_ENDPOINT=https://capi-in.s3.us-east-1.amazonaws.com"
+  exit 1
+fi
+
 # In all script params files, replace /tmp/... with /mnt/...
 for filepath in $(find $LOCAL_CFG_LOCATION -name 'script_params*.json' -type f -print); do
   sudo sed -i -e 's~/tmp/capi_cfg~'$MOUNT_POINT_CFG'~g' $filepath
   sudo sed -i -e 's~/tmp/capi_in~'$MOUNT_POINT_IN'~g' $filepath
   sudo sed -i -e 's~/tmp/capi_out~'$MOUNT_POINT_OUT'~g' $filepath
 done
+
+# In capi_cfg/fannie_mae_bigtest/script_params.json, replace /tmp/capi_in with https://capi-in.s3.us-east-1.amazonaws.com
+# sudo sed -i -e 's~/mnt/capi_in~'$CAPI_IN_S3_BUCKET_ENDPOINT'~g' $LOCAL_CFG_LOCATION/fannie_mae_bigtest/script_params.json
