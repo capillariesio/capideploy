@@ -4,12 +4,12 @@
 # https://stackoverflow.com/questions/38961502/cannot-start-cassandra-snitchs-datacenter-differs-from-previous
 
 if [ "$CASSANDRA_SEEDS" = "" ]; then
-  echo Error, missing: CASSANDRA_SEEDS=10.5.0.11,10.5.0.12
- exit 1
+  echo Error, missing: export CASSANDRA_SEEDS=10.5.0.11,10.5.0.12,10.5.0.13,10.5.0.14
+  exit 1
 fi
 if [ "$CASSANDRA_IP" = "" ]; then
-  echo Error, missing: CASSANDRA_IP=10.5.0.11 or 12 or 13
- exit 1
+  echo Error, missing: export CASSANDRA_IP=10.5.0.11
+  exit 1
 fi
 
 sudo systemctl stop cassandra
@@ -18,14 +18,24 @@ sudo sed -i -e "s~seeds:[\: \"a-zA-Z0-9\.,]*~seeds: $CASSANDRA_SEEDS~g" /etc/cas
 sudo sed -i -e "s~listen_address:[\: \"a-zA-Z0-9\.]*~listen_address: $CASSANDRA_IP~g" /etc/cassandra/cassandra.yaml
 sudo sed -i -e "s~rpc_address:[\: \"a-zA-Z0-9\.]*~rpc_address: $CASSANDRA_IP~g" /etc/cassandra/cassandra.yaml
 sudo sed -i -e "s~endpoint_snitch:[\: \"a-zA-Z0-9\.]*~endpoint_snitch: SimpleSnitch~g" /etc/cassandra/cassandra.yaml
+#sudo sed -i -e "s~prepared_statements_cache_size:[ a-zA-Z0-9]*~prepared_statements_cache_size: 500MiB~g" /etc/cassandra/cassandra.yaml
 
 # Data on attached volume. Comment out to store data on the ephemeral instance volume at /var/lib/cassandra/data.
-#sudo sed -i -e "s~- /var/lib/cassandra/data~- /mnt/data~g" /etc/cassandra/cassandra.yaml
-sudo sed -i -e "s~- /var/lib/cassandra/data~- /mnt/ramdisk/data~g" /etc/cassandra/cassandra.yaml
+#sudo sed -i -e "s~- /var/lib/cassandra/data~- /data/d~g" /etc/cassandra/cassandra.yaml
+#sudo sed -i -e "s~- /var/lib/cassandra/data~- /mnt/ramdisk/data~g" /etc/cassandra/cassandra.yaml
+sudo sed -i -e "s~- /var/lib/cassandra/data~~g" /etc/cassandra/cassandra.yaml
+# One disk or two disks
+if [ -d "/data1" ]; then
+  sudo sed -i -e "s~data_file_directories:[^\n]*~data_file_directories: [ /data0/d, /data1/d ]~g" /etc/cassandra/cassandra.yaml
+else 
+  sudo sed -i -e "s~data_file_directories:[^\n]*~data_file_directories: [ /data0/d ]~g" /etc/cassandra/cassandra.yaml
+fi
 
 # Commitlog on attached volume. Comment out to store commitlog on the ephemeral instance volume at /var/lib/cassandra/commitlog.
-#sudo sed -i -e "s~/var/lib/cassandra/commitlog~/mnt/commitlog~g" /etc/cassandra/cassandra.yaml
-sudo sed -i -e "s~/var/lib/cassandra/commitlog~/mnt/ramdisk/commitlog~g" /etc/cassandra/cassandra.yaml
+#sudo sed -i -e "s~/var/lib/cassandra/commitlog~/data/c~g" /etc/cassandra/cassandra.yaml
+#sudo sed -i -e "s~/var/lib/cassandra/commitlog~/mnt/ramdisk/commitlog~g" /etc/cassandra/cassandra.yaml
+#sudo sed -i -e "s~/var/lib/cassandra/commitlog~~g" /etc/cassandra/cassandra.yaml
+sudo sed -i -e "s~commitlog_directory:[^\n]*~commitlog_directory: /data0/c~g" /etc/cassandra/cassandra.yaml
 
 # Minimal number of vnodes, we do not need elasticity
 sudo sed -i -e "s~num_tokens:[ 0-9]*~num_tokens: 1~g" /etc/cassandra/cassandra.yaml
@@ -52,14 +62,13 @@ sudo sed -i -e "s~write_request_timeout_in_ms:[ ]*[0-9]*~write_request_timeout_i
 
 sudo rm -fR /var/lib/cassandra/data/*
 sudo rm -fR /var/lib/cassandra/commitlog/*
+sudo rm -fR /data0/*
+sudo rm -fR /data1/*
 
 # To avoid "Cannot start node if snitch’s data center (dc1) differs from previous data center (datacenter1)"
 # error, keep using dc and rack variables as they are (dc1,rack1) in /etc/cassandra/cassandra-rackdc.properties
 # but ignore the dc - it's a testing env
 echo 'JVM_OPTS="$JVM_OPTS -Dcassandra.ignore_dc=true"' | sudo tee -a /etc/cassandra/cassandra-env.sh
-
-# Cassandra Prometheus exporter
-echo 'JVM_OPTS="$JVM_OPTS -javaagent:/usr/share/cassandra/lib/cassandra-exporter-agent-'${PROMETHEUS_CASSANDRA_EXPORTER_VERSION}'-SNAPSHOT.jar"' | sudo tee -a /etc/cassandra/cassandra-env.sh
 
 # We do not need this config file, delete it
 sudo rm -f rm /etc/cassandra/cassandra-topology.properties

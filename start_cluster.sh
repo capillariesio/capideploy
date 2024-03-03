@@ -71,6 +71,9 @@ cassNamesString=$(IFS=, ; echo "${cassNames[*]}")
 echo Stopping all nodes in the cluster...
 $capideploy stop_services $cassNamesString -prj="$2"
 
+echo Giving it some time to actually stop...
+sleep 10
+
 if [ "$1" = "sequential" ]; then
   for cassNode in ${cassNodes[@]}
   do

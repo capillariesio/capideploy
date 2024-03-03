@@ -5,14 +5,14 @@
   local dep_name = 'sampledeployment005',  // Can be any combination of alphanumeric characters. Make it unique.
 
   // x - test bare minimum, 2x - better, 4x - decent test, 16x - that's where it gets interesting
-  local cassandra_node_flavor = 'aws.c6a.32', // last number is the number of cores in Cassandra nodes
-  local architecture = 'amd64', // amd64 or arm64 
+  local cassandra_node_flavor = 'aws.c7g.32', // last number is the number of cores in Cassandra nodes
+  local architecture = 'arm64', // amd64 or arm64 
   // Cassandra cluster size - 4,8,16
   local cassandra_total_nodes = 4, 
   // If tasks are CPU-intensive (Python calc), make it equal to cassandra_total_nodes, otherwise cassandra_total_nodes/2
   local daemon_total_instances = cassandra_total_nodes, 
-  local DEFAULT_DAEMON_THREAD_POOL_SIZE = '24', // daemon_cores*1.5
-  local DEFAULT_DAEMON_DB_WRITERS = '16', // Depends on cassandra latency, reasonable values are 5-20
+  local DEFAULT_DAEMON_THREAD_POOL_SIZE = '24', // max daemon_cores*1.5
+  local DEFAULT_DAEMON_DB_WRITERS = '8', // Depends on cassandra latency, reasonable values are 5-20
 
   // Basics
   local default_root_key_name = dep_name + '-root-key',  // This should match the name of the keypair you already created in Openstack/AWS
@@ -171,13 +171,13 @@
       '4x': 'c6a.2xlarge',
       '16x': 'c6a.8xlarge',
       'aws.c6a.8': 'c6a.2xlarge',
-      'aws.c6a.32': 'c6a.8xlarge',
+      'aws.c6a.32': 'c5ad.8xlarge', // 'c5ad.16xlarge' 2x1200  'c5ad.8xlarge' 2x600,
       'aws.c6a.64': 'c6a.16xlarge',
       'aws.c7g.16': 'c7g.4xlarge',
-      'aws.c7g.32': 'c7g.8xlarge',
+      'aws.c7g.32': 'c7gd.8xlarge', // 1x900
       'aws.c7gn.32': 'c7gn.8xlarge',
       'aws.c7gn.64': 'c7gn.16xlarge',
-      'aws.c7g.64': 'c7g.metal',
+      'aws.c7g.64': 'c7gd.16xlarge', // 2x1900
       'aws.c7g.64.all.metal': 'c7g.metal',
       'aws.hpc7g.64': 'hpc7g.16xlarge',      
       '18x': 'c5n.9xlarge',
@@ -214,7 +214,7 @@
       'aws.c7g.32': 'c7g.4xlarge',
       'aws.c7gn.32': 'c7gn.4xlarge',
       'aws.c7gn.64': 'c7gn.8xlarge',
-      'aws.c7g.64': 'c7g.8xlarge',
+      'aws.c7g.64': 'c7g.4xlarge',
       'aws.c7g.64.all.metal': 'c7g.metal',
       'aws.hpc7g.64': 'hpc7g.8xlarge',
       '18x': 'c5n.4xlarge',
@@ -223,6 +223,12 @@
       '96x': 'c6a.24xlarge'
     }
   }, dep_name, cassandra_node_flavor),
+
+  local cassandra_nvme_regex = 
+    if instance_flavor_cassandra == "c5ad.8xlarge" then "nvme[0-9]n[0-9] 558.8G"
+    else if instance_flavor_cassandra == "c7gd.8xlarge" then "nvme[0-9]n[0-9] 1.7T"
+    else if instance_flavor_cassandra == "c7gd.16xlarge" then "nvme[0-9]n[0-9] 1.7T"
+    else "no-nvme-mask-specidied",
 
   // Volumes
   local volume_availability_zone = getFromMap({
@@ -259,16 +265,16 @@
   local sftp_config_private_key_path = '~/.ssh/' + dep_name + '_sftp',
   local ssh_config_private_key_path = '~/.ssh/' + dep_name + '_rsa',
   
-  // Prometheus versions
+  // Prometheus and exporters versions
   local prometheus_node_exporter_version = '1.6.0',
   local prometheus_server_version = '2.45.0',
-  local prometheus_cassandra_exporter_version = '0.9.12',
+  local jmx_exporter_version = '0.20.0',
 
   // Used by Prometheus "\\'localhost:9100\\',\\'10.5.0.10:9100\\',\\'10.5.0.5:9100\\',\\'10.5.0.11:9100\\'...",
-  local prometheus_targets = std.format("\\'localhost:9100\\',\\'%s:9100\\',\\'%s:9100\\',", [internal_bastion_ip, rabbitmq_ip]) +
-                             "\\'" + std.join(":9100\\',\\'", cassandra_ips) + ":9100\\'," +
-                             "\\'" + std.join(":9500\\',\\'", cassandra_ips) + ":9500\\'," + // Cassandra exporter
-                             "\\'" + std.join(":9100\\',\\'", daemon_ips) + ":9100\\'",
+  local prometheus_targets = std.format("\\'localhost:9100\\',\\'%s:9100\\',\\'%s:9100\\',", [internal_bastion_ip, rabbitmq_ip]) + // Prometheus node exporter
+                             "\\'" + std.join(":9100\\',\\'", cassandra_ips) + ":9100\\'," + // Prometheus node exporter
+                             "\\'" + std.join(":7070\\',\\'", cassandra_ips) + ":7070\\'," + // JMX exporter
+                             "\\'" + std.join(":9100\\',\\'", daemon_ips) + ":9100\\'",      // Prometheus node exporter
 
   deploy_provider_name: provider_name,
 
@@ -472,11 +478,11 @@
           direction: 'ingress',
         },
         {
-          desc: 'Cassandra Prometheus node exporter',
+          desc: 'JMX exporter',
           protocol: 'tcp',
           ethertype: 'IPv4',
           remote_ip: $.network.cidr,
-          port: 9500,
+          port: 7070,
           direction: 'ingress',
         },
         {
@@ -1019,13 +1025,15 @@
           CASSANDRA_SEEDS: cassandra_seeds,
           INITIAL_TOKEN: e.token,
           PROMETHEUS_NODE_EXPORTER_VERSION: prometheus_node_exporter_version,
-          PROMETHEUS_CASSANDRA_EXPORTER_VERSION: prometheus_cassandra_exporter_version,
+          JMX_EXPORTER_VERSION: jmx_exporter_version,
+          NVME_REGEX: cassandra_nvme_regex,
         },
         cmd: {
           install: [
             'sh/common/replace_nameserver.sh',
             'sh/prometheus/install_node_exporter.sh',
             'sh/cassandra/install.sh',
+            'sh/common/attach_nvme.sh', // must run after Cassandra install
           ],
           config: [
             'sh/prometheus/config_node_exporter.sh',
@@ -1086,9 +1094,9 @@
           config: [
             'sh/nfs/config_client.sh',
             'sh/logrotate/config_capidaemon_logrotate.sh',
-            'sh/rsyslog/config_capidaemon_log_sender.sh',
             'sh/prometheus/config_node_exporter.sh',
             'sh/daemon/config.sh',
+            'sh/rsyslog/config_capidaemon_log_sender.sh', // This should go after daemon/config.sh, otherwise rsyslog sender does not pick up /var/log/capidaemon/capidaemon.log
           ],
           start: [
             'sh/daemon/start.sh',

@@ -319,7 +319,12 @@ ssh -o StrictHostKeyChecking=no -i ~/.ssh/sampledeployment002_rsa ubuntu@$BASTIO
 Download all results from capi_out (may take a while):
 
 ```
-	$capideploy download_files down_capi_out -prj=sampledeployment.json
+$capideploy download_files down_capi_out -prj=sampledeployment.json
+```
+
+or use scp command:
+```
+scp -i ~/.ssh/sampledeployment005_rsa ubuntu@$BASTION_IP:/mnt/capi_out/fannie_mae_bigtest/loan_summaries_calculated.parquet loan_summaries_calculated.parquet
 ```
 
 Alternatively, verify results against the baseline remotely:
