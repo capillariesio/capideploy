@@ -253,7 +253,7 @@
             "cidr": "10.5.0.0/24",
             "allocation_pool": "start=10.5.0.240,end=10.5.0.254",
             "availability_zone": "us-east-1a",
-            "route_table_to_nat": "rtb-0906e766c141dd972"
+            "route_table_to_nat": "rtb-0ccae09fe86a374a8"
         },
         "public_subnet": {
             "name": "sampledeployment005_public_subnet",
