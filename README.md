@@ -26,7 +26,7 @@ Capideploy tool uses deployment project file (see sample `sampledeployment.json`
 - push Capillaries data and binaries to created Openstack/AWS deployment
 - clean Openstack/AWS deployment
 
-Deployment project files contain description and status of each instance. When there are a lot of instances that perform the same tesk (like Cassandra nodes or instances running Capillaries Daemon which makes them pretty redundant. To avoid creating repetitive configurations manually, use [jsonnet](https://jsonnet.org) templates like `sampledeployment.jsonnet`. Before deploying, make sure that you have generated a deployment project `*.json` file from the `*.jsonnet` template, and, under normal circumstances, avoid manual changes in your `*.json` file. Tweak `*.jsonnet` file and regenerate `*.json` instead, using jsonnet interpreter of your choice. Feel free to manually tweak `*.json` file if you really think you know what you are doing.
+Deployment project files contain description and status of each instance. When there are a lot of instances that perform the same task (like Cassandra nodes or instances running Capillaries Daemon) which makes them pretty redundant. To avoid creating repetitive configurations manually, use [jsonnet](https://jsonnet.org) templates like `sampledeployment.jsonnet`. Before deploying, make sure that you have generated a deployment project `*.json` file from the `*.jsonnet` template, and, under normal circumstances, avoid manual changes in your `*.json` file. Tweak `*.jsonnet` file and regenerate `*.json` instead, using jsonnet interpreter of your choice. Feel free to manually tweak `*.json` file if you really think you know what you are doing.
 
 ## Before deployment
 
@@ -205,10 +205,10 @@ Resource usage:
 
 | Metric | Prometheus screen |
 |- | - |
-| CPU usage % | `http://$BASTION_IP:9090/graph?g0.expr=(1%20-%20avg(irate(node_cpu_seconds_total%7Bmode%3D%22idle%22%7D%5B10m%5D))%20by%20(instance))%20*%20100&g0.tab=0&g0.stacked=0&g0.show_exemplars=0&g0.range_input=15m` |
+| CPU usage % | `http://$BASTION_IP:9090/graph?g0.expr=(1%20-%20avg(irate(node_cpu_seconds_total%7Bmode%3D"idle"%7D%5B10m%5D))%20by%20(instance))%20*%20100&g0.tab=0&g0.stacked=0&g0.show_exemplars=1&g0.range_input=30m` |
 | RAM usage % | `http://$BASTION_IP:9090/graph?g0.expr=100%20*%20(1%20-%20((avg_over_time(node_memory_MemFree_bytes%5B10m%5D)%20%2B%20avg_over_time(node_memory_Cached_bytes%5B10m%5D)%20%2B%20avg_over_time(node_memory_Buffers_bytes%5B10m%5D))%20%2F%20avg_over_time(node_memory_MemTotal_bytes%5B10m%5D)))&g0.tab=0&g0.stacked=0&g0.show_exemplars=0&g0.range_input=15m` |
 | Disk usage % | `http://$BASTION_IP:9090/graph?g0.expr=100%20-%20((node_filesystem_avail_bytes%7Bmountpoint%3D%22%2F%22%2Cfstype!%3D%22rootfs%22%7D%20*%20100)%2Fnode_filesystem_size_bytes%7Bmountpoint%3D%22%2F%22%2Cfstype!%3D%22rootfs%22%7D)&g0.tab=0&g0.stacked=0&g0.show_exemplars=0&g0.range_input=15m` |
-| Cassandra writes: count/s and latency | `http://$BASTION_IP:9090/graph?g0.expr=sum(irate(cassandra_table_operation_latency_seconds_count%7Bkeyspace!%3D"system"%2Coperation%3D"write"%7D%5B1m%5D))&g0.tab=0&g0.stacked=0&g0.show_exemplars=1&g0.range_input=15m&g1.expr=avg(cassandra_table_operation_latency_seconds%7Bkeyspace!%3D"system"%2Coperation%3D"write"%7D)&g1.tab=0&g1.stacked=0&g1.show_exemplars=0&g1.range_input=15m` |
+| Cassandra write/read count | `http://$BASTION_IP:9090/graph?g0.expr=sum(irate(cassandra_clientrequest_localrequests_count%7Bclientrequest%3D"Write"%7D%5B1m%5D))&g0.tab=0&g0.stacked=0&g0.show_exemplars=1&g0.range_input=30m&g1.expr=sum(irate(cassandra_clientrequest_localrequests_count%7Bclientrequest%3D"Read"%7D%5B1m%5D))&g1.tab=0&g1.stacked=0&g1.show_exemplars=0&g1.range_input=30m` |
 
 Consolidated Daemon log from all Daemon instances:
 

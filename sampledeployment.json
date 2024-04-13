@@ -253,7 +253,7 @@
             "cidr": "10.5.0.0/24",
             "allocation_pool": "start=10.5.0.240,end=10.5.0.254",
             "availability_zone": "us-east-1a",
-            "route_table_to_nat": "rtb-07207076e2c245309"
+            "route_table_to_nat": "rtb-0ccae09fe86a374a8"
         },
         "public_subnet": {
             "name": "sampledeployment005_public_subnet",
@@ -686,7 +686,7 @@
             "security_group": "internal",
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.0.11",
-            "flavor": "c7gd.8xlarge",
+            "flavor": "c7gd.16xlarge",
             "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "private",
@@ -725,7 +725,7 @@
             "security_group": "internal",
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.0.12",
-            "flavor": "c7gd.8xlarge",
+            "flavor": "c7gd.16xlarge",
             "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "private",
@@ -764,7 +764,7 @@
             "security_group": "internal",
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.0.13",
-            "flavor": "c7gd.8xlarge",
+            "flavor": "c7gd.16xlarge",
             "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "private",
@@ -803,7 +803,7 @@
             "security_group": "internal",
             "root_key_name": "sampledeployment005-root-key",
             "ip_address": "10.5.0.14",
-            "flavor": "c7gd.8xlarge",
+            "flavor": "c7gd.16xlarge",
             "image": "ami-064b469793e32e5d2",
             "availability_zone": "not-used-borrowed-from-subnet",
             "subnet_type": "private",
@@ -857,8 +857,8 @@
                 "env": {
                     "AMQP_URL": "amqp://{CAPIDEPLOY_RABBITMQ_USER_NAME}:{CAPIDEPLOY_RABBITMQ_USER_PASS}@10.5.0.5/",
                     "CASSANDRA_HOSTS": "'[\"10.5.0.11\",\"10.5.0.12\",\"10.5.0.13\",\"10.5.0.14\"]'",
-                    "DAEMON_DB_WRITERS": "4",
-                    "DAEMON_THREAD_POOL_SIZE": "16",
+                    "DAEMON_DB_WRITERS": "16",
+                    "DAEMON_THREAD_POOL_SIZE": "24",
                     "INTERNAL_BASTION_IP": "10.5.1.10",
                     "NFS_DIRS": "/mnt/capi_cfg,/mnt/capi_in,/mnt/capi_out",
                     "PROMETHEUS_NODE_EXPORTER_VERSION": "1.6.0",
@@ -875,9 +875,9 @@
                     "config": [
                         "sh/nfs/config_client.sh",
                         "sh/logrotate/config_capidaemon_logrotate.sh",
-                        "sh/rsyslog/config_capidaemon_log_sender.sh",
                         "sh/prometheus/config_node_exporter.sh",
-                        "sh/daemon/config.sh"
+                        "sh/daemon/config.sh",
+                        "sh/rsyslog/config_capidaemon_log_sender.sh"
                     ],
                     "start": [
                         "sh/daemon/start.sh",
@@ -914,8 +914,8 @@
                 "env": {
                     "AMQP_URL": "amqp://{CAPIDEPLOY_RABBITMQ_USER_NAME}:{CAPIDEPLOY_RABBITMQ_USER_PASS}@10.5.0.5/",
                     "CASSANDRA_HOSTS": "'[\"10.5.0.11\",\"10.5.0.12\",\"10.5.0.13\",\"10.5.0.14\"]'",
-                    "DAEMON_DB_WRITERS": "4",
-                    "DAEMON_THREAD_POOL_SIZE": "16",
+                    "DAEMON_DB_WRITERS": "16",
+                    "DAEMON_THREAD_POOL_SIZE": "24",
                     "INTERNAL_BASTION_IP": "10.5.1.10",
                     "NFS_DIRS": "/mnt/capi_cfg,/mnt/capi_in,/mnt/capi_out",
                     "PROMETHEUS_NODE_EXPORTER_VERSION": "1.6.0",
@@ -932,9 +932,9 @@
                     "config": [
                         "sh/nfs/config_client.sh",
                         "sh/logrotate/config_capidaemon_logrotate.sh",
-                        "sh/rsyslog/config_capidaemon_log_sender.sh",
                         "sh/prometheus/config_node_exporter.sh",
-                        "sh/daemon/config.sh"
+                        "sh/daemon/config.sh",
+                        "sh/rsyslog/config_capidaemon_log_sender.sh"
                     ],
                     "start": [
                         "sh/daemon/start.sh",
@@ -971,8 +971,8 @@
                 "env": {
                     "AMQP_URL": "amqp://{CAPIDEPLOY_RABBITMQ_USER_NAME}:{CAPIDEPLOY_RABBITMQ_USER_PASS}@10.5.0.5/",
                     "CASSANDRA_HOSTS": "'[\"10.5.0.11\",\"10.5.0.12\",\"10.5.0.13\",\"10.5.0.14\"]'",
-                    "DAEMON_DB_WRITERS": "4",
-                    "DAEMON_THREAD_POOL_SIZE": "16",
+                    "DAEMON_DB_WRITERS": "16",
+                    "DAEMON_THREAD_POOL_SIZE": "24",
                     "INTERNAL_BASTION_IP": "10.5.1.10",
                     "NFS_DIRS": "/mnt/capi_cfg,/mnt/capi_in,/mnt/capi_out",
                     "PROMETHEUS_NODE_EXPORTER_VERSION": "1.6.0",
@@ -989,9 +989,9 @@
                     "config": [
                         "sh/nfs/config_client.sh",
                         "sh/logrotate/config_capidaemon_logrotate.sh",
-                        "sh/rsyslog/config_capidaemon_log_sender.sh",
                         "sh/prometheus/config_node_exporter.sh",
-                        "sh/daemon/config.sh"
+                        "sh/daemon/config.sh",
+                        "sh/rsyslog/config_capidaemon_log_sender.sh"
                     ],
                     "start": [
                         "sh/daemon/start.sh",
@@ -1028,8 +1028,8 @@
                 "env": {
                     "AMQP_URL": "amqp://{CAPIDEPLOY_RABBITMQ_USER_NAME}:{CAPIDEPLOY_RABBITMQ_USER_PASS}@10.5.0.5/",
                     "CASSANDRA_HOSTS": "'[\"10.5.0.11\",\"10.5.0.12\",\"10.5.0.13\",\"10.5.0.14\"]'",
-                    "DAEMON_DB_WRITERS": "4",
-                    "DAEMON_THREAD_POOL_SIZE": "16",
+                    "DAEMON_DB_WRITERS": "16",
+                    "DAEMON_THREAD_POOL_SIZE": "24",
                     "INTERNAL_BASTION_IP": "10.5.1.10",
                     "NFS_DIRS": "/mnt/capi_cfg,/mnt/capi_in,/mnt/capi_out",
                     "PROMETHEUS_NODE_EXPORTER_VERSION": "1.6.0",
@@ -1046,9 +1046,9 @@
                     "config": [
                         "sh/nfs/config_client.sh",
                         "sh/logrotate/config_capidaemon_logrotate.sh",
-                        "sh/rsyslog/config_capidaemon_log_sender.sh",
                         "sh/prometheus/config_node_exporter.sh",
-                        "sh/daemon/config.sh"
+                        "sh/daemon/config.sh",
+                        "sh/rsyslog/config_capidaemon_log_sender.sh"
                     ],
                     "start": [
                         "sh/daemon/start.sh",

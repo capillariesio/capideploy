@@ -5,14 +5,14 @@
   local dep_name = 'sampledeployment005',  // Can be any combination of alphanumeric characters. Make it unique.
 
   // x - test bare minimum, 2x - better, 4x - decent test, 16x - that's where it gets interesting
-  local cassandra_node_flavor = 'aws.c7g.32', // last number is the number of cores in Cassandra nodes
+  local cassandra_node_flavor = 'aws.c7g.64', // last number is the number of cores in Cassandra nodes
   local architecture = 'arm64', // amd64 or arm64 
   // Cassandra cluster size - 4,8,16
   local cassandra_total_nodes = 4, 
   // If tasks are CPU-intensive (Python calc), make it equal to cassandra_total_nodes, otherwise cassandra_total_nodes/2
   local daemon_total_instances = cassandra_total_nodes, 
   local DEFAULT_DAEMON_THREAD_POOL_SIZE = '24', // max daemon_cores*1.5
-  local DEFAULT_DAEMON_DB_WRITERS = '8', // Depends on cassandra latency, reasonable values are 5-20
+  local DEFAULT_DAEMON_DB_WRITERS = '16', // Depends on cassandra latency, reasonable values are 5-20
 
   // Basics
   local default_root_key_name = dep_name + '-root-key',  // This should match the name of the keypair you already created in Openstack/AWS
